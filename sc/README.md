@@ -1,0 +1,50 @@
+address:
+0x710807457D58C3673C07FCa3171592E74e9749440001fCE7  1  0 
+
+private:
+0x93fc0babe95cb8767af5d4da6617a62522bcd841162705a6e02706f08bede062
+
+
+contract address:
+
+0x2f37a8560b53baa98fcdca9276bb67596e79dc732431f09543c0466e4ead217f0001fce7
+
+
+Transaction
+
+ID:
+0x2f37a8560b53baa98fcdca9276bb67596e79dc732431f09543c0466e4ead217f0001fce7
+Chain:
+1
+Shard:
+0
+Block:
+311932
+Position in Block:
+0
+Timestamp:
+2019-09-16 20:29:16 PDT
+Root Confirmation:
+0
+TxReceipt Status:
+Success
+From:
+0x710807457D58C3673C07FCa3171592E74e9749440001fCE7
+To:
+[Contract 0x30D1b3468bFe0b52dAd139d14236996470F2E8150001fCE7 Created] ✓
+Value:
+0 QKC
+Gas Limit:
+4,300,000
+Gas Used By Txn:
+2,261,209
+Gas Price:
+0.00000001 QKC (10 Gwei)
+Actual Tx Cost/Fee:
+0.02261209 QKC
+Nonce:
+0
+Signature:
+v: 0x1c
+r: 0x69b228fe5032215c98df4a4a5a4fceecafc3e245bb354b8cde2759fdc0f5a583
+s: 0x3ca9f86b5a03f1282d63a2fdf2814adf5121d217211db996de43e179a8d2fc32
