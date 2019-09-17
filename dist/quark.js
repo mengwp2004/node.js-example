@@ -1,12 +1,21 @@
-import QuarkChain from 'quarkchain-web3';
-import Web3 from 'web3';
+'use strict';
 
-const web3 = new Web3();
+var _quarkchainWeb = require('quarkchain-web3');
+
+var _quarkchainWeb2 = _interopRequireDefault(_quarkchainWeb);
+
+var _web = require('web3');
+
+var _web2 = _interopRequireDefault(_web);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+const web3 = new _web2.default();
 
 var mainUrl = 'http://jrpc.mainnet.quarkchain.io:38391';
 var testUrl = 'http://jrpc.devnet.quarkchain.io:38391';
 
-QuarkChain.injectWeb3(web3, testUrl);
+_quarkchainWeb2.default.injectWeb3(web3, testUrl);
 
 const mainnetNetworkId = '0x1';
 const devnetNetworkId = '0xff';
@@ -268,11 +277,11 @@ function getBalance(a) {
 }
 
 function getEthAddress(a) {
-	return QuarkChain.getEthAddressFromQkcAddress(a);
+	return _quarkchainWeb2.default.getEthAddressFromQkcAddress(a);
 }
 
 function getQkcAddress(q) {
-	return QuarkChain.getQkcAddressFromEthAddress(q);
+	return _quarkchainWeb2.default.getQkcAddressFromEthAddress(q);
 }
 
 function getTransactionCount(a) {
