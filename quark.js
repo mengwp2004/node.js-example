@@ -1,12 +1,8 @@
 import QuarkChain from 'quarkchain-web3';
 import Web3 from 'web3';
 
-const web3 = new Web3();
-
 var mainUrl = 'http://jrpc.mainnet.quarkchain.io:38391';
 var testUrl =  'http://jrpc.devnet.quarkchain.io:38391';
-
-QuarkChain.injectWeb3(web3, testUrl);
 
 const mainnetNetworkId = '0x1';
 const devnetNetworkId = '0xff';
@@ -323,11 +319,19 @@ var watchAbi = [
 	}
 ];
 
+
+
+var web3;
+var myContractInstance;
+
 var movieAddress = '0x30D1b3468bFe0b52dAd139d14236996470F2E8150001fCE7';
 
-var MyContract = web3.qkc.contract(movieAbi);
-
-var myContractInstance = MyContract.at(movieAddress);
+function init(){
+  web3 = new Web3();
+  QuarkChain.injectWeb3(web3, testUrl);
+  var MyContract = web3.qkc.contract(movieAbi);
+  myContractInstance = MyContract.at(movieAddress);
+}
 
 function getRelation(id){
 
@@ -359,56 +363,55 @@ function getTransactionCount(a){
 function sendTransaction(transactionObject){
 
 }
-
 //qkc address
 var a = "0x710807457D58C3673C07FCa3171592E74e9749440001fCE7"; 
-web3.qkc.setPrivateKey('0x93fc0babe95cb8767af5d4da6617a62522bcd841162705a6e02706f08bede062');
-console.log(a);
+var aPrivate = "0x93fc0babe95cb8767af5d4da6617a62522bcd841162705a6e02706f08bede062";
 
-// get qkc balance
-var balance = getBalance(a);
-console.log(balance);  
+function test(){
+  
+  init();
+  web3.qkc.setPrivateKey(aPrivate);
+  console.log(a);
 
-var ethAddress = getEthAddress(a);
-console.log(ethAddress);
+  // get qkc balance
+  var balance = getBalance(a);
+  console.log(balance);  
 
-var qkcAddress = getQkcAddress(ethAddress);
-console.log(qkcAddress);
+  var ethAddress = getEthAddress(a);
+  console.log(ethAddress);
 
-var count = getTransactionCount(a);
-console.log(count);
+  var qkcAddress = getQkcAddress(ethAddress);
+  console.log(qkcAddress);
 
-var relation = getRelation(1);
-console.log("getRelatoin:" + relation);
+  var count = getTransactionCount(a);
+  console.log(count);
 
-var hex = issueContract(a,"hello",1);
-console.log("issueContract:" + hex);
+  var relation = getRelation(1);
+  console.log("getRelatoin:" + relation);
+
+  var hex = issueContract(a,"hello",1);
+  console.log("issueContract:" + hex);
+
+}
 
 
-// Needed in nodejs environment, otherwise would require MetaMask.
-/*web3.qkc.setPrivateKey('0xdf311ea55c9d9b4baa7dc3cac123e54a06c9389279ee3b461fb61b9d060fcee8');
-const fullShardKey = '0x0005Fc90';
-console.log('eth address', web3.qkc.address);
+//test()
+init();
+
+function getData(){
+  console.log("get data from quark!");
+  return getBalance(a);
+
+}
+
+function putData(){
+  return "put data from quark!";
+}
 
 
-var result = QuarkChain.getQkcAddressFromEthAddress( web3.qkc.address);
-console.log(result);
-web3.qkc.getBalance(result,console.log);
-
-const tx = {
-  gas: `0x${(30000).toString(16)}`,
-  // Minimum gas price: 10gwei
-  gasPrice: '0x2540be400',
-  data: '0x',
-  to: '0x7E5F4552091A69125d5DfCb7b8C2659029395Bdf0005Fc90',
-  value: '0x0',
-  networkId: devnetNetworkId,
-  fromFullShardKey: fullShardKey,
-  toFullShardKey: fullShardKey,
-  transferTokenId: '0x8bb0',
-  gasTokenId: '0x8bb0',
+exports.default = {
+  getData,
+  putData
 };
 
-// Should be able to find tx ID in console.
-web3.qkc.sendTransaction(tx, console.log);
-*/
+module.exports = exports['default'];

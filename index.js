@@ -2,6 +2,7 @@ const http = require('http');
 const nUrl = require('url');
 const config = require('./config');
 const controller = require('./controller');
+const quark = require('./services/quark');
 
 //redis
 var redis   = require('redis');
@@ -38,7 +39,8 @@ amqpConn.on('ready', function () {
             if (message.data) {  
                 var messageText = message.data.toString();  
                 console.log(messageText);  
-                var data = JSON.parse(messageText); 
+                data = quark.getData(); 
+                console.log(data);
             }  
         });  
     });  
