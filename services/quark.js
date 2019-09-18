@@ -10,6 +10,8 @@ var _web2 = _interopRequireDefault(_web);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
+var ethereumjsUtil = require('ethereumjs-util');
+
 var mainUrl = 'http://jrpc.mainnet.quarkchain.io:38391';
 var testUrl = 'http://jrpc.devnet.quarkchain.io:38391';
 
@@ -274,6 +276,45 @@ function issueContract(from, name, id) {
 	return myContractInstance.issueContract.sendTransaction(name, id, { from: from });
 }
 
+function callFunction(functionName, ...inputArgs) {
+	var abiMethods = movieAbi.filter(i => i.name && i.type === "function").sort((a, b) => a.name.localeCompare(b.name));
+	const method = abiMethods.find(i => i.name === functionName);
+	const sha3 = ethereumjsUtil.sha3;
+	let inputs = method.inputs;
+	const inputTypes = inputs.map(i => i.type);
+	let typeNames = inputTypes.join();
+	console.log(typeNames);
+	const funcFullName = method.name + "(" + typeNames + ")";
+	const funcSig = sha3(funcFullName).toString("hex").slice(0, 8);
+	console.log(funcFullName);
+	console.log(funcSig);
+	//let inuputArgs = args;
+	const args = [];
+	for (let i = 0; i < inputs.length; ++i) {
+		const arg = inputArgs[i];
+		if (arg) {
+			const t = inputs[i].type;
+			if (t.indexOf("[") !== -1 && t.indexOf("]") !== -1) {
+				args.push(arg.split(",").map(a => a.trim()));
+			} else if (t === "bool") {
+				args.push(JSON.parse(arg));
+			} else {
+				args.push(arg);
+			}
+		} else {
+			args.push("");
+		}
+	}
+	console.log(inputArgs);
+	//console.log(web3.SolidityCoder);
+	const encodedFuncCall = "0x" + funcSig + web3.SolidityCoder.encodeParams(inputTypes, args);
+	const fromBuffer = ethereumjsUtil.toBuffer(a);
+	const fromFullShardKey = "0x" + fromBuffer.subarray(20).toString("hex");
+	const toBuffer = ethereumjsUtil.toBuffer(movieAddress);
+	const toFullShardKey = "0x" + toBuffer.subarray(20).toString("hex");
+	console.log("encodedFuncCall:" + encodedFuncCall + ", fromFullShardKey:" + fromFullShardKey);
+}
+
 function getBalance(a) {
 	return web3.qkc.getBalance(a).toNumber();
 }
@@ -317,12 +358,15 @@ function test() {
 	var relation = getRelation(1);
 	console.log("getRelatoin:" + relation);
 
-	var hex = issueContract(a, "hello", 1);
-	console.log("issueContract:" + hex);
+	//var hex = issueContract(a,"hello",1);
+	//console.log("issueContract:" + hex);
+
+	callFunction("issueContract");
 }
 
 //test()
 init();
+callFunction("issueContract", "hello", 1);
 
 function getData() {
 	console.log("get data from quark!");

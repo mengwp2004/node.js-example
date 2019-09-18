@@ -1,5 +1,6 @@
 import QuarkChain from 'quarkchain-web3';
 import Web3 from 'web3';
+var ethereumjsUtil = require('ethereumjs-util');
 
 var mainUrl = 'http://jrpc.mainnet.quarkchain.io:38391';
 var testUrl =  'http://jrpc.devnet.quarkchain.io:38391';
@@ -343,6 +344,87 @@ function issueContract(from,name,id){
   return  myContractInstance.issueContract.sendTransaction(name,id,{from:from});
 }
 
+function callFunction(functionName, ...inputArgs){
+   var abiMethods = movieAbi
+          .filter(i => i.name && i.type === "function")
+          .sort((a, b) => a.name.localeCompare(b.name));
+   const method = abiMethods.find(i => i.name === functionName); 
+   const sha3 = ethereumjsUtil.sha3;
+   let inputs = method.inputs;
+   const inputTypes = inputs.map(i => i.type);
+   let typeNames = inputTypes.join();
+   console.log(typeNames);
+   const funcFullName = method.name + "(" + typeNames + ")";
+   const funcSig = sha3(funcFullName).toString("hex").slice(0, 8);
+   console.log(funcFullName);
+   console.log(funcSig);
+   //let inuputArgs = args;
+   const args = [];
+   for (let i = 0; i < inputs.length; ++i) {
+          const arg = inputArgs[i];
+          if (arg) {
+            const t = inputs[i].type;
+            if (t.indexOf("[") !== -1 && t.indexOf("]") !== -1) {
+              args.push(arg.split(",").map(a => a.trim()));
+            } else if (t === "bool") {
+              args.push(JSON.parse(arg));
+            } else {
+              args.push(arg);
+            }
+          } else {
+            args.push("");
+          }
+   }
+   console.log(inputArgs);
+   //console.log(web3.SolidityCoder);
+   const encodedFuncCall = "0x" + funcSig +
+   web3.SolidityCoder.encodeParams(inputTypes, args);
+   const fromBuffer = ethereumjsUtil.toBuffer(a);
+   const fromFullShardKey = "0x" + fromBuffer.subarray(20).toString("hex");
+   const toBuffer = ethereumjsUtil.toBuffer(movieAddress);
+   const toFullShardKey = "0x" + toBuffer.subarray(20).toString("hex");
+   console.log("encodedFuncCall:" + encodedFuncCall + ", fromFullShardKey:" + fromFullShardKey);
+  
+   let nonce = getTransactionCount(a); 
+   let gasLimit = 4300000;
+
+   let gasPriceGwei = 10; 
+   let networkId = ;
+   let gasTokenId = ;  
+   let transferTokenId = ;
+   const rawTx = {
+          nonce: nonce,
+          to: "0x" + toBuffer.subarray(0, 20).toString("hex"),
+          gasPrice: "0x" + (Number(gasPriceGwei) * 1e9).toString(16),
+          gas: "0x" + (gasLimit ? Number(gasLimit) : 1000000).toString(16),
+          data: encodedFuncCall,
+          value: "0x" + value.toString(16),
+          fromFullShardKey,
+          toFullShardKey,
+          networkId: `0x${networkId.toString(16)}`,
+          gasTokenId: `0x${gasTokenId.toString(16)}`,
+          transferTokenId: `0x${transferTokenId.toString(16)}`,
+   };
+
+   const tx = new ethereumjs.Tx(rawTx);
+   if (this.key) {
+            tx.sign(ethereumjs.Util.toBuffer(this.key));
+   } /*else {
+            try {
+              var sig = await this.metaMaskSignTyped(tx);
+              tx.version = '0x01';
+              rawTx.version = '0x01'; // show version
+              Object.assign(tx, this.decodeSignature(sig));
+            } catch (error) {
+              return;
+            }
+   }*/
+   
+
+
+ 
+}
+
 function getBalance(a){
   return web3.qkc.getBalance(a).toNumber();
 }
@@ -389,14 +471,16 @@ function test(){
   var relation = getRelation(1);
   console.log("getRelatoin:" + relation);
 
-  var hex = issueContract(a,"hello",1);
-  console.log("issueContract:" + hex);
+  //var hex = issueContract(a,"hello",1);
+  //console.log("issueContract:" + hex);
 
+  callFunction("issueContract");
 }
 
 
 //test()
 init();
+callFunction("issueContract","hello",1);
 
 function getData(){
   console.log("get data from quark!");
