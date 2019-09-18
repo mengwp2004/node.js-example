@@ -1,0 +1,1626 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <title>QuarkChain Devnet</title>
+  <link rel="icon"
+        href="https://developers.quarkchain.io/images/qkc_favicon.png"
+        type="image/png" />
+  <meta charset="utf-8">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta http-equiv="content-type"
+        content="text/html; charset=UTF-8"> 
+  <link type="text/css"
+        rel="stylesheet"
+        href="//unpkg.com/bootstrap/dist/css/bootstrap.min.css" />
+  <link type="text/css"
+        rel="stylesheet"
+        href="//unpkg.com/bootstrap-vue@latest/dist/bootstrap-vue.css" />
+  <link rel="stylesheet"
+        type="text/css"
+        href="/static/explorer/style.css" />
+
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.5.22/dist/vue.js"></script>
+  <script src="https://unpkg.com/babel-polyfill@latest/dist/polyfill.min.js"></script>
+  <script src="https://unpkg.com/bootstrap-vue@2.0.0-rc.13/dist/bootstrap-vue.js"></script>
+  <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/moment@2.21.0/moment.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vue-slider-component@2.7.2/dist/index.js"></script>
+  <script src="https://d3js.org/d3.v4.min.js"></script>
+  <script src="https://d3js.org/d3-selection-multi.v1.js"></script>
+  <script src="https://d3js.org/topojson.v2.min.js"></script>
+  <script src="https://d3js.org/d3-array.v1.min.js"></script>
+  <script src="https://d3js.org/d3-geo.v1.min.js"></script>
+  <script src="https://d3js.org/d3-geo-projection.v2.min.js"></script>
+  <script src="https://d3js.org/d3-ease.v1.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/quarkchain-web3@0.2.3/dist/quarkchain-web3.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lodash@4.13.1/lodash.min.js"></script>
+  <script src="/static/explorer/bignumber.min.js"></script>
+  <script src="/static/explorer/quarkchain-ethereumjs-tx-1.3.3.js"></script>
+  <script src="/static/explorer/web3-solidity-utils.js"></script>
+  <!-- Global site tag (gtag.js) - Google Analytics -->
+  <script async
+          src="https://www.googletagmanager.com/gtag/js?id=UA-120117941-2"></script>
+  <script src="https://www.google.com/recaptcha/api.js"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+
+    gtag('config', 'UA-120117941-2');
+  </script>
+</head>
+
+<body>
+  <div id="nav">
+    <b-navbar toggleable="md"
+              type="dark"
+              variant="info"
+              id="nav">
+      <b-navbar-toggle target="nav_collapse"></b-navbar-toggle>
+      <b-navbar-brand href="/">
+        QuarkChain
+        <span class="brand-subtitle">devnet</span>
+      </b-navbar-brand>
+      
+      <b-collapse is-nav
+                  id="nav_collapse">
+        <b-navbar-nav>
+          <b-nav-item :active="active=='wallet'"
+                      href="/wallet">Wallet</b-nav-item>
+          <b-nav-item :active="active=='contract'"
+                      href="/contract">Contract</b-nav-item>
+          <b-nav-item :active="active=='explorer'"
+                      href="/explorer">Explorer</b-nav-item>
+          <b-nav-item :active="active=='stats'"
+                      href="/stats">Stats</b-nav-item>
+          <b-nav-item :active="active=='network'"
+                      href="/network">Network</b-nav-item>
+          <b-nav-item :active="active=='loadtest'"
+                      href="https://youtu.be/dUldrq3zKwE?t=8m28s" target="_blank">Loadtest</b-nav-item>
+          <b-nav-item :active="active=='faucet'"
+                      href="/faucet">Faucet</b-nav-item>
+          <!--
+          <b-nav-item :active="active=='game'"
+                      href="/app/simple-game">Game</b-nav-item>
+          -->
+          <b-nav-item :active="active=='leaderboard'"
+                      href="/leaderboard">Miners</b-nav-item>
+        </b-navbar-nav>
+        <!-- Right aligned nav items -->
+        <b-navbar-nav class="ml-auto">
+          <b-nav-item-dropdown v-if="displayContent"
+                               :text="'Cluster: ' + selectedNode"
+                               right
+                               v-b-tooltip.hover.left
+                               title="Pick the cluster to connect">
+            <b-dropdown-item v-for="node in nodes"
+                             @click="selectNode(node)"
+                             :key="node">[node]</b-dropdown-item>
+          </b-nav-item-dropdown>
+        </b-navbar-nav>
+      </b-collapse>
+      
+    </b-navbar>
+    <b-modal id="credential"
+             ref="credentialModal"
+             title="Private Key"
+             v-model="needCredentials"
+             size="lg"
+             @ok="modalOk"
+             @hide="modalHide"
+             :hide-header-close="true"
+             ok-only>
+      <p>
+        We do not store your private key on the server. The private key generation is handled on your browser only.
+        <br></br>
+        Back up your private key if you want to reuse in the future. If you lose your private key, it cannot be recovered.
+        <br></br>
+        <span class="text-danger">
+          This is the QuarkChain devnet, please do not send any ERC-20 QKC tokens to this wallet.
+        </span>
+      </p>
+      <form @submit.stop.prevent="modalSubmit">
+        <b-input-group>
+          <b-form-input id="pk_input"
+                        type="text"
+                        v-model="pkForDisplay"
+                        placeholder="Enter your 32 byte private key (0x1234...) or GENERATE a new one">
+          </b-form-input>
+          <b-input-group-append>
+            <b-btn variant="outline-primary"
+                   v-b-tooltip.hover
+                   title="Please save the private key safely!"
+                   @click="generatePk">GENERATE</b-btn>
+          </b-input-group-append>
+        </b-input-group>
+      </form>
+    </b-modal>
+  </div>
+
+  <div id="admin_accounts"
+       style="display: none"
+       data=""></div>
+
+  <script>
+
+    axios.defaults.xsrfCookieName = "csrftoken";
+    axios.defaults.xsrfHeaderName = "X-CSRFToken";
+
+    Vue.filter("BN", (value) => {
+      if (!value) {
+        return 0;
+      }
+      value = BigNumber(value);
+      const s = value.toFormat(18);
+      let zeros = 0;
+      for (let i = s.length - 1; i >= 0; --i) {
+        const v = s[i];
+        if (v === ".") {
+          zeros += 1;
+          break;
+        }
+        if (v !== "0") {
+          break;
+        }
+        zeros += 1;
+      }
+      return s.slice(0, s.length - zeros);
+    });
+
+    Vue.filter("short", (value) => {
+      if (value === "") return value;
+      return value.slice(0, 16) + "...";
+    });
+
+    // Address checksum similar to EIP 55 capitals-based checksum
+    // Recipient and shard id are checksummed separately
+    Vue.filter("CS", (address) => {
+      if (address.length !== 50) {
+        return address;
+      }
+      address = address.replace("0x", "");
+      const addressHash = ethereumjs.Util.sha3(address.slice(0, 40).toLowerCase()).toString("hex");
+      let newAddress = "";
+      for (let i = 0; i < 40; i++) {
+        // the nth letter should be uppercase if the nth digit of casemap is 1
+        if (parseInt(addressHash[i], 16) > 7) {
+          newAddress += address[i].toUpperCase();
+        } else {
+          newAddress += address[i].toLowerCase();
+        }
+      }
+      const shardIdHash = ethereumjs.Util.sha3(address.slice(40).toLowerCase()).toString("hex");
+      for (let i = 40; i < 48; i++) {
+        // the nth letter should be uppercase if the nth digit of casemap is 1
+        if (parseInt(shardIdHash[i], 16) > 7) {
+          newAddress += address[i].toUpperCase();
+        } else {
+          newAddress += address[i].toLowerCase();
+        }
+      }
+      return "0x" + newAddress;
+    });
+
+    /**
+     * Checks if the given string is an address
+     *
+     * @method isAddress
+     * @param {String} address the given HEX address
+     * @return {Boolean}
+    */
+    function isAddress(address) {
+      if (!/^(0x)?[0-9a-f]{48}$/i.test(address)) {
+        // check if it has the basic requirements of an address
+        return false;
+      } else if (/^(0x)?[0-9a-f]{48}$/.test(address) || /^(0x)?[0-9A-F]{48}$/.test(address)) {
+        // If it's all small caps or all all caps, return true
+        return true;
+      }
+      // otherwise check each case
+      return isChecksumAddress(address);  // eslint-disable-line
+    }
+
+    /**
+     * Checks if the given string is a checksummed address
+     *
+     * @method isChecksumAddress
+     * @param {String} address the given HEX address
+     * @return {Boolean}
+    */
+    function isChecksumAddress(address) {
+      // check each case
+      address = address.replace("0x", "");
+      const addressHash = ethereumjs.Util.sha3(address.slice(0, 40).toLowerCase()).toString("hex");
+      for (let i = 0; i < 40; i++) {
+        // the nth letter should be uppercase if the nth digit of casemap is 1
+        if ((parseInt(addressHash[i], 16) > 7 && address[i].toUpperCase() !== address[i]) || (parseInt(addressHash[i], 16) <= 7 && address[i].toLowerCase() !== address[i])) {
+          return false;
+        }
+      }
+      const shardIdHash = ethereumjs.Util.sha3(address.slice(40).toLowerCase()).toString("hex");
+      for (let i = 40; i < 48; i++) {
+        // the nth letter should be uppercase if the nth digit of casemap is 1
+        if ((parseInt(shardIdHash[i], 16) > 7 && address[i].toUpperCase() !== address[i]) || (parseInt(shardIdHash[i], 16) <= 7 && address[i].toLowerCase() !== address[i])) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    /**
+     * Convert tx in block from server to the rendering format.
+    */
+    function convertBlockTxForRendering(txs) {
+      return txs.map(tx => Object.assign({}, tx, {
+        toAddress: tx.to === "0x" ? null : `${tx.to}${tx.toFullShardKey.slice(2)}`,
+        fromAddress: `${tx.from}${tx.fromFullShardKey.slice(2)}`,
+        blockHeight: parseInt(tx.blockHeight, 16),
+        timestamp: parseInt(tx.timestamp, 16),
+        toShard: parseInt(tx.toShardId, 16),
+      }));
+    }
+
+    const nav = new Vue({
+      el: "#nav",
+      delimiters: ["[", "]"],
+      data: {
+        active: "",
+        nodes: [],
+        selectedNode: "none",
+        displayContent: true,
+        needCredentials: false,
+        pkForDisplay: "",
+      },
+      created() {
+        this.getNodes();
+
+        // if admin, accounts are provided from backend
+        const adminAccounts = JSON.parse(document.getElementById("admin_accounts").getAttribute("data") || "[]");
+        if (adminAccounts.length > 0) {
+          const pk = adminAccounts[0].key;
+          const address = Vue.filter("CS")(adminAccounts[0].address);
+          window.sessionStorage.setItem("pk", pk);
+          window.sessionStorage.setItem("address", address);
+          return;
+        }
+
+        // wallet & contract page need private key
+        this.needCredentials = (
+          window.location.pathname.startsWith("/wallet") ||
+          window.location.pathname.startsWith("/contract") ||
+          window.location.pathname.startsWith("/faucet") ||
+          window.location.pathname.startsWith("/app")
+        ) && !window.sessionStorage.getItem("pk")
+        && (typeof web3 === 'undefined');
+      },
+      methods: {
+        getNodes() {
+          axios.post("/getNodes")
+            .then((resp) => {
+              this.nodes = resp.data.nodes;
+              this.selectedNode = resp.data.selected;
+            })
+            .catch((error) => {
+              console.log(error);  // eslint-disable-line
+              alert.danger("Lost connection to the network");
+              this.displayContent = false;
+            });
+        },
+        selectNode(node) {
+          axios.post("/selectNode", { node })
+            .then((resp) => {
+              this.nodes = resp.data.nodes;
+              this.selectedNode = resp.data.selected;
+              // refresh page
+              window.location.reload();
+            });
+        },
+        modalOk(evt) {
+          evt.preventDefault();
+          this.modalSubmit();
+        },
+        modalHide(evt) {
+          // `null` means triggered programmatically in submit
+          // otherwise hiding is not allowed
+          if (evt.trigger !== null) {
+            evt.preventDefault();
+          }
+        },
+        modalSubmit() {
+          if (!this.pkForDisplay) {
+            window.alert("Please enter your private key!");
+            return;
+          }
+          if (this.pkForDisplay.length !== 66) {
+            window.alert("Private key should have 32 bytes");
+            return;
+          }
+          this.$refs.credentialModal.hide();
+          const pkBuf = ethereumjs.Util.toBuffer(this.pkForDisplay);
+          const ethAddress = "0x" + ethereumjs.Util.privateToAddress(pkBuf).toString("hex");
+          const address = Vue.filter("CS")(QuarkChain.getQkcAddressFromEthAddress(ethAddress));
+          window.sessionStorage.setItem("pk", this.pkForDisplay);
+          window.sessionStorage.setItem("address", address);
+          window.location.reload(false);
+        },
+        generatePk() {
+          const pkArr = new Uint8Array(32);
+          window.crypto.getRandomValues(pkArr);
+          const pkBuf = ethereumjs.Buffer.Buffer(pkArr);
+          this.pkForDisplay = `0x${pkBuf.toString("hex")}`;
+        },
+      },
+    });
+
+  </script>
+
+  <div id="content"
+       class="p-3 w-100 mx-auto mw-75"
+       style="max-width: 1120px">
+
+    <div id="alert">
+      <b-alert :show="show"
+               :variant="variant"
+               dismissible
+               v-html="text"></b-alert>
+    </div>
+    <script type="text/javascript">
+      const alert = new Vue({
+        el: "#alert",
+        delimiters: ["[", "]"],
+        data: {
+          text: "",
+          show: 0,
+          variant: "info",
+        },
+        methods: {
+          danger(text, delay = 0) {
+            this.variant = "danger";
+            this.show = true;
+            this.text = text;
+            if (delay) {
+              setTimeout(() => this.dismiss(), delay);
+            }
+          },
+          warning(text, delay = 0) {
+            this.variant = "warning";
+            this.show = true;
+            this.text = text;
+            if (delay) {
+              setTimeout(() => this.dismiss(), delay);
+            }
+          },
+          info(text, delay = 0) {
+            this.variant = "info";
+            this.show = true;
+            this.text = text;
+            if (delay) {
+              setTimeout(() => this.dismiss(), delay);
+            }
+          },
+          success(text, delay = 0) {
+            this.variant = "success";
+            this.show = true;
+            this.text = text;
+            if (delay) {
+              setTimeout(() => this.dismiss(), delay);
+            }
+          },
+          dismiss() {
+            this.show = false;
+          },
+        },
+      });
+    </script> 
+
+<div id="contract"
+     v-if="nav.displayContent">
+
+  
+<div>
+  <b-container fluid
+               class="px-0">
+    <b-row no-gutters>
+      <b-col class="pb-3 pr-md-3">
+        <b-card title="Account"
+                class="h-100">
+          <hr />
+          <b-form-group horizontal
+                        :label-cols="2"
+                        label-size="sm"
+                        label="Address"
+                        label-for="input_address">
+            <b-input-group size="sm">
+              <b-form-input size="sm"
+                            class="font-for-address"
+                            id="input_address"
+                            :value="address"
+                            readonly></b-form-input>
+              <b-dropdown :text="'Chain ' + chainId" variant="outline-secondary" slot="append" size="sm">
+                <b-dropdown-item v-for="chain in chainSize" @click="selectChainShard(chain - 1, shardId)">
+                  <span>[(chain - 1)]</span>
+                </b-dropdown-item>
+              </b-dropdown>
+              <b-dropdown :text="'Shard ' + shardId" variant="outline-secondary" slot="append" size="sm">
+                <b-dropdown-item v-for="shard in chainShardSize" @click="selectChainShard(chainId, shard - 1)">
+                  <span>[(shard - 1)]</span>
+                </b-dropdown-item>
+              </b-dropdown>
+            </b-input-group>
+          </b-form-group>
+          <b-form-group horizontal
+                        :label-cols="2"
+                        label-size="sm"
+                        label="Private Key"
+                        label-for="input_key"
+                        v-if="!hasMetaMask">
+            <b-input-group>
+              <b-form-input size="sm"
+                            class="font-for-address"
+                            id="input_key"
+                            :value="keyDisplay"
+                            readonly>
+              </b-form-input>
+              <b-input-group-append>
+                <b-btn variant="outline-secondary"
+                       size="sm"
+                       @click="showKeySwitch"> [ showKeyAction ] </b-btn>
+              </b-input-group-append>
+            </b-input-group>
+          </b-form-group>
+          <b-form-group horizontal
+                        :label-cols="2"
+                        label-size="sm"
+                        label=""
+                        label-for="backed"
+                        v-if="hasMetaMask">
+            <b-input-group size="sm">
+              This Account is backed by MetaMask.
+              <b-link v-b-toggle.collapse1>
+                Learn More
+              </b-link>
+              <b-img src="/static/explorer/metamask-fox.svg" alt="Metamask Logo" height="25px"/>
+            </b-input-group>
+            <b-collapse id="collapse1" class="mt-2">
+              <h2>MetaMask</h2>
+              <p>Similar to how MetaMask bridges between your browser and Ethereum,
+              we proudly present QuarkChain Devnet with MetaMask support to bridge your browser to QuarkChain!</p>
+              <h3>Accounts</h3>
+              <P>The address shown here is backed by your MetaMask plugin,
+                but bear in mind that the addresses backed by the same private key may have real ETH in main Ethereum network.
+                This is similar situation where your accounts may have ETH in both main Ethereum Network or Ropsten Testnet.
+                When you interact with QuarkChain, your real ETH is safe, see below.</P>
+              <h3>Signature</h3>
+              <p>When you interact with QuarkChain using MetaMask,
+                we ask for signatures from your private key stored with MetaMask.
+                To make sure the signature won't be used to do evil
+                (for example, sending the same signed transaction to main Ethereum Network for your real ETH,)
+                we follow <b-link href="https://github.com/ethereum/EIPs/blob/master/EIPS/eip-712.md">EIP-712</b-link>
+                to use typedSign(), which includes QuarkChain-specific fields.
+                As you can observe, the transaction and signature combination is only valid on QuarkChain and cannot be used elsewhere.
+              </p>
+              <h3>Existing Testnet Accounts</h3>
+              <p>You can import existing accounts of QuarkChain Testnet to MetaMask, just follow
+                <b-link href="https://github.com/MetaMask/faq/blob/master/USERS.md#introduction">this link</b-link>
+                to import using your private key.
+                Note those accounts won't be backed by your private seed.</p>
+            </b-collapse>
+          </b-form-group>
+          <div v-if="maxShard">
+            <template v-if="maxShard.chainId === chainId && maxShard.shardId === shardId">
+            The current shard has the most [tokenStr] balance
+            </template>
+            <template v-else>
+            Chain [maxShard.chainId] Shard [maxShard.shardId] has the most [tokenStr] balance
+            <b-link @click="selectChainShard(maxShard.chainId, maxShard.shardId)" :disabled="syncing">Click to switch!</b-link>
+            </template>
+
+          </div>
+        </b-card>
+      </b-col>
+      <b-col md="auto"
+             class="pb-3">
+        <b-card title="Tokens"
+                id="balance"
+                class="h-100">
+          <hr />
+          <template v-if="shards.length > 0">
+            <p class="card-text">
+               <b-form-select v-model="tokenStr" :options="tokenStrs" @change="refresh()" size="sm" />
+              <p class="text-primary">
+                <strong>[ primaryBalance|BN ]</strong>
+                <small>(in shard)</small>
+              </p>
+              <p class="text-secondary">[ totalBalance|BN ]
+                <small>(total)</small>
+              </p>
+            </p>
+            <b-button :pressed.sync="showBalanceDetail"
+                      class="m-1"
+                      variant="primary"
+                      size="sm"
+                      :disabled="syncing">Show Detail</b-button>
+            <div>
+              <!-- Modal Component -->
+              <b-modal id="balanceDetail"
+                       v-model="showBalanceDetail"
+                       title="Balance Detail">
+                <b-list-group flush>
+                  <b-list-group-item v-for="shard in shards"
+                                     v-if="shard.balances.length > 0"
+                                     :key="shard.fullShardId">
+                    <h5 class="mb-1">Chain [shard.chainId] / Shard [ shard.shardId ]</h5>
+                    <span v-for="(balance, tokenStr) in shard.balanceMap" v-if="balance > 0">
+                      [ balance|BN ] [tokenStr]
+                    <b-link class="float-right"
+                            @click="generateBalanceTransfer(shard, tokenStr)"
+                            v-if="allowBalanceTransfer">Transfer to current address</b-link>
+                    <br>
+                    </span>
+                  </b-list-group-item>
+                </b-list-group>
+              </b-modal>
+            </div>
+          </template>
+          <template v-else>
+            <p class="card-text text-secondary">Loading ...</p>
+          </template>
+        </b-card>
+      </b-col>
+    </b-row>
+  </b-container>
+</div>
+
+
+  <div role="tablist">
+    <b-card no-body
+            class="mb-1">
+      <b-card-header header-tag="header"
+                     class="p-1"
+                     role="tab">
+        <b-btn block
+               href="#"
+               v-b-toggle.doc
+               variant="info">Smart Contract on QuarkChain</b-btn>
+      </b-card-header>
+      <b-collapse id="doc"
+                  accordion="contract-accordion"
+                  visible>
+        <b-card-body>
+          <p class="card-text">
+            QuarkChain supports Ethereum smart contracts, therefore you can use your favorite Ethereum tooling like
+            <code>solc</code> and
+            <code>remix</code> to compile the smart contract, deploy here in QuarkChain and interact with them.
+            <br></br>
+            It's worth noting that
+            <ol>
+              <li>QuarkChain smart contracts only support in-shard interaction, which means it can only access addresses within
+                the same shard.</li>
+              <li>Currently, you can only create the contract at the same shard as you
+              </li>
+            </ol>
+          </p>
+        </b-card-body>
+      </b-collapse>
+    </b-card>
+    <b-card no-body
+            class="mb-1">
+      <b-card-header header-tag="header"
+                     class="p-1"
+                     role="tab">
+        <b-btn block
+               href="#"
+               v-b-toggle.example
+               variant="info">Example</b-btn>
+      </b-card-header>
+      <b-collapse id="example"
+                  accordion="contract-accordion">
+        <b-card-body>
+          <p class="card-text">
+            Using following code (source from
+            <a href="https://github.com/fivedogit/solidity-baby-steps/blob/master/contracts/05_greeter.sol">here</a>, with slight changes) as the example:
+          </p>
+          <pre class="code-block"><code>pragma solidity ^0.4.24;
+
+contract Greeter {
+  address creator;
+  string greeting;
+
+  constructor(string _greeting) public {
+      creator = msg.sender;
+      greeting = _greeting;
+  }
+
+  function greet() constant public returns (string) {return greeting; }
+
+  function getBlockNumber() constant public returns (uint) { return block.number; }
+
+  function setGreeting(string _newgreeting) public { greeting = _newgreeting; }
+}</code></pre>
+          <p class="card-text">
+            Use
+            <a href="https://remix.ethereum.org/">
+              <code>remix</code>
+            </a> to generate the byte code
+            <pre class="code-block"><code>0x608060405234801561001057600080fd5b5060405161045938038061045983398101806040528101908080518201929190505050336000806101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff1602179055508060019080519060200190610089929190610090565b5050610135565b828054600181600116156101000203166002900490600052602060002090601f016020900481019282601f106100d157805160ff19168380011785556100ff565b828001600101855582156100ff579182015b828111156100fe5782518255916020019190600101906100e3565b5b50905061010c9190610110565b5090565b61013291905b8082111561012e576000816000905550600101610116565b5090565b90565b610315806101446000396000f300608060405260043610610057576000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff16806342cbb15c1461005c578063a413686214610087578063cfae3217146100f0575b600080fd5b34801561006857600080fd5b50610071610180565b6040518082815260200191505060405180910390f35b34801561009357600080fd5b506100ee600480360381019080803590602001908201803590602001908080601f0160208091040260200160405190810160405280939291908181526020018383808284378201915050505050509192919290505050610188565b005b3480156100fc57600080fd5b506101056101a2565b6040518080602001828103825283818151815260200191508051906020019080838360005b8381101561014557808201518184015260208101905061012a565b50505050905090810190601f1680156101725780820380516001836020036101000a031916815260200191505b509250505060405180910390f35b600043905090565b806001908051906020019061019e929190610244565b5050565b606060018054600181600116156101000203166002900480601f01602080910402602001604051908101604052809291908181526020018280546001816001161561010002031660029004801561023a5780601f1061020f5761010080835404028352916020019161023a565b820191906000526020600020905b81548152906001019060200180831161021d57829003601f168201915b5050505050905090565b828054600181600116156101000203166002900490600052602060002090601f016020900481019282601f1061028557805160ff19168380011785556102b3565b828001600101855582156102b3579182015b828111156102b2578251825591602001919060010190610297565b5b5090506102c091906102c4565b5090565b6102e691905b808211156102e25760008160009055506001016102ca565b5090565b905600a165627a7a72305820b65144ba1d967908bb1a2d47f6e1c39f81b666ce2776d5ee9791692038a1b0b30029</code></pre> Then in our devnet, go to
+            <i>Deploy</i> tab, paste the byte code above, set a high gas limit (for example ~3,000,000 to be safe), and click
+            <b>Deploy</b> button.
+            <br></br>
+            Once the transaction is confirmed by the network, copy the contract address from the transaction detail page, go to
+            <i>Interact</i> tab, paste the deployed contract's address along with the ABI (which you can also get from remix):
+            <pre class="code-block"><code>[ placeholder ]</code></pre> After accessing the contract through the provided ABI, you can read from or write to the contract.
+          </p>
+        </b-card-body>
+      </b-collapse>
+    </b-card>
+  </div>
+
+  <b-card no-body>
+    <b-tabs card>
+      <b-tab :active="interacting"
+             @click="clickInteractingTab"
+             title="Interact">
+        <b-form-group label-size="sm"
+                      label="Contract Address"
+                      label-for="input_contract_address"
+                      :invalid-feedback="contractAddressInvalidFeedback"
+                      :state="contractAddressState">
+          <b-form-input size="sm"
+                        id="input_contract_address"
+                        placeholder="0x123456..."
+                        v-model.trim="contractAddress"
+                        :state="contractAddressState"
+                        spellcheck="false"
+                        required />
+        </b-form-group>
+        <b-form-group label-size="sm"
+                      label="ABI / JSON Interface"
+                      label-for="input_abi"
+                      :invalid-feedback="abiInvalidFeedback"
+                      :state="abiState">
+          <b-form-textarea size="sm"
+                           id="input_abi"
+                           rows=6
+                           v-model.trim="abi"
+                           :placeholder="placeholder"
+                           :state="abiState"
+                           spellcheck="false"
+                           required />
+        </b-form-group>
+        <b-btn variant="primary"
+               size="sm"
+               @click="access"
+               aria-controls="collapseInteraction"
+               :disabled="!interactValid"
+               :aria-expanded="showInteraction">
+
+          Access
+
+        </b-btn>
+
+        <b-collapse v-model="showInteraction"
+                    id="collapseInteraction"
+                    class="mt-3">
+          <br />
+          <h5>Read / Write Contract</h5>
+          <br />
+          <b-dropdown size="md"
+                      variant="secondary"
+                      :text="selectedMethod.name">
+            <b-dropdown-item v-for="method in abiMethods"
+                             :key="method.name"
+                             @click="chooseMethod">
+              [ method.name ]
+            </b-dropdown-item>
+          </b-dropdown>
+          <hr />
+          <b-form-group horizontal
+                        :label-cols="2"
+                        label-size="md"
+                        v-for="(param, index) in selectedMethod.inputs"
+                        :key="param.name"
+                        :label="param.label || param.name"
+                        :label-for="'input_' + param.name">
+            <b-input-group size="sm">
+              <b-form-input :placeholder="param.placeholder || param.type"
+                            size="md"
+                            :id="'input_' + param.name"
+                            v-model.trim="inputArgs[index]" />
+            </b-input-group>
+          </b-form-group>
+
+          <b-form-group horizontal
+                        :label-cols="2"
+                        label-size="md"
+                        v-for="(output, index) in selectedMethod.outputs"
+                        :key="output.name"
+                        :label="'↳' + output.name"
+                        :label-for="'output_' + output.name">
+            <b-input-group size="sm">
+              <b-form-input :placeholder="output.placeholder || output.type"
+                            :id="'output_' + output.name"
+                            size="md"
+                            disabled
+                            v-model="outputResults[index]" />
+            </b-input-group>
+          </b-form-group>
+
+          <b-btn v-if="selectedMethod.type"
+                 :variant="selectedMethod.constant ? 'primary' : 'danger'"
+                 size="sm"
+                 :class="showTx ? 'collapsed' : null"
+                 aria-controls="collapseTx"
+                 :aria-expanded="showTx"
+                 @click="interact">
+
+            [ selectedMethod.constant ? 'Read' : 'Write' ]
+
+          </b-btn>
+
+        </b-collapse>
+      </b-tab>
+      <b-tab :active="deploying"
+             @click="clickDeployingTab"
+             title="Deploy">
+        <b-form-group label-size="sm"
+                      label="Byte Code"
+                      label-for="input_contract_byte_code"
+                      :invalid-feedback="contractByteCodeInvalidFeedback"
+                      :state="contractByteCodeState">
+          <b-form-textarea size="sm"
+                           id="input_contract_byte_code"
+                           rows=6
+                           v-model.trim="contractByteCode"
+                           placeholder="0x1234......"
+                           :state="contractByteCodeState"
+                           spellcheck="false"
+                           @input="hideTx"
+                           required />
+        </b-form-group>
+        <b-form-group label-size="sm"
+                      label="Gas Limit"
+                      label-for="input_gas_limit"
+                      :invalid-feedback="gasLimitInvalidFeedback"
+                      :state="gasLimitState">
+          <b-form-input size="sm"
+                        id="input_gas_limit"
+                        placeholder="1000000"
+                        v-model.trim="gasLimit"
+                        :state="gasLimitState"
+                        @input="hideTx"
+                        required />
+        </b-form-group>
+        <b-btn variant="primary"
+               size="sm"
+               :disabled="!deployValid"
+               :class="showTx ? 'collapsed' : null"
+               aria-controls="collapseTx"
+               :aria-expanded="showTx"
+               @click="deploy">
+
+          Deploy
+
+        </b-btn>
+      </b-tab>
+    </b-tabs>
+  </b-card>
+
+  <b-collapse v-model="showTx"
+              id="collapseTx"
+              class="mt-3">
+
+    <h5 v-if="deploying"
+        class="text-success">In-shard contract deployment
+      <small class="text-secondary"> (confirmation time is ~15 seconds)</small>
+    </h5>
+    <h5 v-else
+        class="text-success">Update state in the contract
+      <small class="text-secondary"> (confirmation time is ~15 seconds)</small>
+    </h5>
+
+    <b-card-group deck
+              class="mt-3">
+  <b-card header="Transaction Detail">
+    <p class="card-text">
+      <b>Raw Transaction</b>
+      <pre class="code-block">[txJson]</pre>
+    </p>
+    <p class="card-text">
+      <b>Signed Transaction Hash</b>
+      <pre class="code-block">[txHashSigned()]</pre>
+    </p>
+  </b-card>
+  <b-card header="Transaction Confirmation">
+    <p class="card-text">
+      <b>From</b>
+    </p>
+    <pre class="code-block-for-address"><code>[ `${fromAddress}` ]</code></pre>
+    <pre><code>[ `(shard ${fromShard})`.padStart(50) ]</code></pre>
+    <p class="card-text">
+      <b>To</b>
+    </p>
+    <pre class="code-block-for-address"><code>[ toShard !== -1 ? `${toAddress}` : "Contract Creation" ]</code></pre>
+    <pre v-if="toShard !== -1"><code>[ `(shard ${toShard})`.padStart(50) ]</code></pre>
+    <hr />
+    <p class="card-text">
+      <b>You'll send</b>
+      <span style="float: right">[ Number(amount) | BN ] [tokenStr]</span>
+    </p>
+    <p class="card-text">
+      <b>Max Transaction Fee</b>
+      <span style="float: right">[ (gasLimit || 1e6) * gasPriceGwei / 1e9 | BN ] [gasTokenStr]</span>
+    </p>
+
+    <div style="float: right">
+      <b-button variant="secondary"
+                size="sm"
+                @click="showTx = !showTx"
+                :disabled="syncing">Cancel</b-button>
+      <b-button variant="danger"
+                size="sm"
+                @click="sendTx"
+                :disabled="syncing">Submit Transaction</b-button>
+    </div>
+  </b-card>
+</b-card-group>
+
+
+  </b-collapse>
+
+</div>
+
+<script>
+
+function intTo4ByteHex(number){
+  // works on both signed and unsigned number, output is strictly 4-byte hex
+  // number should be in range [-2147483648, 4294967295]
+  const buffer = new ethereumjs.Buffer.Buffer(4);
+  if (number > 2147483647) {
+    buffer.writeUInt32BE(number);
+  } else {
+    buffer.writeInt32BE(number);
+  }
+  return ethereumjs.Util.bufferToHex(buffer).slice(2);
+}
+
+  const balanceMixin = {
+    delimiters: ["[", "]"],
+    data: {
+      oldAddress: "",  // fullShardKey is random which does not respect chain id
+      address: "",  // fullShardKey has proper chain id and random shard key
+      key: "",
+      chainSize: 0,
+      shardSizes: [],
+      networkId: null,
+      chainId: -1,
+      shardId: -1,
+      chainShardSize: 0,
+      tokenStrToId: {"QKC": 35760},
+      tokenStrs: ["QKC"],
+      tokenStr: "QKC",
+      syncing: false,
+      showBalanceDetail: false,
+      shards: [],
+      maxShard: null,
+      primaryBalance: BigNumber(0),
+      totalBalance: BigNumber(0),
+      totalBalanceMap: {},
+      allowBalanceTransfer: true,
+      showKey: false,
+      FullShardKey: "0x00000000",
+      oldFullShardKey: "0x00000000",
+    },
+    watch: {
+      tokenStr: function (newTokenStr, oldTokenStr) {
+        this.updateMaxShard();
+      }
+    },
+    async created() {
+      if (this.hasMetaMask) {
+        if (window.ethereum) { // Modern dapp browsers using metamask
+            await window.ethereum.enable();
+        }
+        const qkc = web3.qkc || {};
+        this.oldAddress = qkc.defaultAccount || this.getAddressFromMetaMask();
+        setInterval(async function() {
+          const qkcAddress = qkc.defaultAccount || this.getAddressFromMetaMask();
+          if (this.getEthAddressFromQkcAddress(qkcAddress) !== this.getEthAddressFromQkcAddress(this.oldAddress)) {
+            this.clear();  // clear states to force reloading the data from blockchain
+            this.oldAddress = qkcAddress;
+            this.fullShardKey = this.getFullShardIdFromEthAddress(this.getEthAddressFromQkcAddress(qkcAddress));
+            this.oldFullShardKey = this.fullShardKey;
+            await this.refresh();
+          }
+        }.bind(this), 500);
+      } else {
+        const pk = window.sessionStorage.getItem("pk");
+        if (!pk) {
+          return;
+        }
+        this.oldAddress = window.sessionStorage.getItem("address");
+        this.key = pk;
+      }
+      this.fullShardKey = this.getFullShardIdFromQkcAddress(this.oldAddress);
+      this.oldFullShardKey = this.fullShardKey;
+      await this.refresh();
+    },
+    computed: {
+      keyDisplay() {
+        return this.showKey ? this.key : "*".repeat(66);
+      },
+      showKeyAction() {
+        return this.showKey ? "Hide" : "Show";
+      },
+      hasMetaMask() {
+        return (typeof web3 !== 'undefined');
+      },
+      transferTokenId() {
+        return this.tokenStrToId[this.tokenStr];
+      },
+      gasTokenId() {
+        return this.tokenStrToId[this.gasTokenStr];
+      }
+    },
+    methods: {
+      clear() {
+        this.totalBalanceMap = {};
+        this.shards = [];
+      },
+      async refresh() {
+        this.networkId = null;
+        const networkInfoResp = await axios.get("/getNetworkInfo");
+        this.syncing = networkInfoResp.data.syncing;
+        if (this.syncing) {
+          alert.info("This cluster is still catching up with the network and thus unable to process any transactions");
+        }
+        this.chainSize = Number(networkInfoResp.data.chainSize)
+        this.networkId = Number(networkInfoResp.data.networkId);
+        this.shardSizes = [];
+        const shardSizes = networkInfoResp.data.shardSizes;
+        for (var i = 0; i < shardSizes.length; ++i) {
+          this.shardSizes.push(Number(shardSizes[i]));
+        }
+
+        const fullShardKeyInt = Number(this.fullShardKey);
+        // >>> is unsigned shift
+        this.chainId = (fullShardKeyInt >>> 16) % this.chainSize;
+        this.chainShardSize = this.shardSizes[this.chainId];
+        const shardMask = this.chainShardSize - 1;
+        this.shardId = fullShardKeyInt & shardMask;
+        newFullShardKeyInt = (this.chainId << 16) + (fullShardKeyInt & ((1 << 16) - 1));
+        this.address = Vue.filter("CS")(this.getEthAddressFromQkcAddress(this.oldAddress) + intTo4ByteHex(newFullShardKeyInt));
+
+        await this.updateBalance();
+      },
+      async selectChainShard(chain, shard) {
+        const shardSize = this.shardSizes[chain];
+        const shardMask = shardSize - 1;
+        if (shard >= shardSize) {
+          shard = 0;
+        }
+        const fullShardKeyInt = (chain << 16) + (parseInt(this.oldFullShardKey, 16) & ((1 << 16) - 1) & (~shardMask) | shard);
+        this.fullShardKey = "0x" + intTo4ByteHex(fullShardKeyInt);
+        this.refresh();
+      },
+      async updateBalance() {
+        if (this.shards.length === 0) {
+          // load data from blockchain and switch to the max shard
+          await this.getBalances();
+          this.updateMaxShard();
+          await this.selectChainShard(this.maxShard.chainId, this.maxShard.shardId);
+          return;
+        }
+
+        // select the shard based on the ui selection
+        var selectedShard = null;
+        for (var i in this.shards) {
+          const shard = this.shards[i];
+          if (shard.shardId === this.shardId && shard.chainId === this.chainId) {
+            selectedShard = shard;
+            break;
+          }
+        }
+        this.primaryBalance = selectedShard.balanceMap[this.tokenStr] || BigNumber(0);
+        this.totalBalance = this.totalBalanceMap[this.tokenStr] || BigNumber(0);
+      },
+      async getBalances() {
+        const accountDataResp = await axios.post("/getAccountData", { address: this.address });
+        this.shards = accountDataResp.data.shards;
+
+        for (let i = 0; i < this.shards.length; ++i) {
+          const shard = this.shards[i];
+          shard.fullShardId = Number(shard.fullShardId);
+          shard.shardId = Number(shard.shardId);
+          shard.chainId = Number(shard.chainId);
+          shard.transactionCount = Number(shard.transactionCount);
+          shard.isContract = Boolean(shard.isContract);
+          shard.balanceMap = {};
+          for (var j in shard.balances) {
+            const item = shard.balances[j];
+            const balance = BigNumber(item.balance).dividedBy(1e18);
+            shard.balanceMap[item.tokenStr] = balance;
+            if (!(item.tokenStr in this.totalBalanceMap)) {
+              this.totalBalanceMap[item.tokenStr] = BigNumber(0);
+            }
+            this.totalBalanceMap[item.tokenStr] = this.totalBalanceMap[item.tokenStr].plus(balance);
+            this.tokenStrToId[item.tokenStr] = Number(item.tokenId);
+          }
+          // 30000 gas at 1 Gwei price
+          //shard.transferable = BigNumber(shard.balance).isGreaterThanOrEqualTo(BigNumber(3e13));
+        }
+        this.tokenStrs = Object.keys(this.tokenStrToId);
+      },
+      // update maxShard to chain/shard with most balances of tokenStr
+      updateMaxShard() {
+        var max = BigNumber(0);
+        // default to shards[0]
+        this.maxShard = this.shards[0];
+        for (let i = 0; i < this.shards.length; ++i) {
+          const shard = this.shards[i];
+          const balance = BigNumber(shard.balanceMap[this.tokenStr] || 0);
+          if (balance.isGreaterThanOrEqualTo(max)) {
+            max = balance;
+            this.maxShard = shard;
+          }
+        }
+      },
+      async generateBalanceTransfer(shard, tokenStr) {
+        this.showBalanceDetail = false;
+        this.tokenStr = tokenStr;
+
+        const from = Vue.filter("CS")(this.getEthAddressFromQkcAddress(this.address) + intTo4ByteHex(shard.fullShardId));
+        const to = this.address;
+
+        this.amount = BigNumber(shard.balanceMap[tokenStr]).multipliedBy(1e18);
+        if (this.gasTokenStr === this.tokenStr) {
+          // amount after deducting the gas
+          const gasCost = BigNumber(this.gasLimit)
+            .multipliedBy(this.gasPriceGwei)
+            .multipliedBy(1e9);
+          this.amount = this.amount.minus(gasCost);
+        }
+        this.amount = this.amount.dividedBy(1e18);
+        this.generateTx({ from, to });
+      },
+      showKeySwitch() {
+        this.showKey = !this.showKey;
+      },
+      metaMaskIsUnlocked() {
+        const web3js = new Web3(web3.currentProvider);
+        return web3js.eth.accounts.length != 0;
+      },
+      getAddressFromMetaMask() {
+        if (!this.metaMaskIsUnlocked()) {
+          return "Please unlock MetaMask";
+        }
+        const web3js = new Web3(web3.currentProvider);
+        var address =  web3js.eth.accounts[0];
+        return Vue.filter("CS")(QuarkChain.getQkcAddressFromEthAddress(address));
+      },
+      getEthAddressFromQkcAddress(address) {
+        if (address.length !== 50) {
+          return address;
+        }
+        return QuarkChain.getEthAddressFromQkcAddress(address);
+      },
+      getFullShardIdFromEthAddress(address) {
+        if (address.length !== 42) {
+          return "0x00000000";
+        }
+        return QuarkChain.getFullShardIdFromEthAddress(address);
+      },
+      getFullShardIdFromQkcAddress(address) {
+        if (address.length !== 50) {
+          return "0x00000000";
+        }
+        return QuarkChain.getFullShardIdFromQkcAddress(address);
+      },
+      metaMaskSign(msg) {
+        alert.info("Awaiting MetaMask signature confirmation...");
+        return new Promise(function(resolve,reject) {
+          const web3js = new Web3(web3.currentProvider);
+          web3js.eth.sign(web3js.eth.accounts[0], msg, function(err, result) {
+            if(err !== null) {
+              alert.danger("It looks you declined the transaction in MetaMask");
+              return reject(err);
+            }
+            alert.dismiss();
+            resolve(result);
+          });
+        });
+      },
+      metaMaskSignTyped(tx) {
+        alert.info("Awaiting MetaMask signature confirmation...");
+        return new Promise(function(resolve,reject) {
+            const web3js = new Web3(web3.currentProvider);
+            var from = web3js.eth.accounts[0];
+            var params = [this.getTypedTx(tx), from];
+            var method = 'eth_signTypedData';
+            web3js.currentProvider.sendAsync({
+              method,
+              params,
+              from,
+            }, function (err, result) {
+              if(result.error !== undefined) {
+                alert.danger("It looks you declined the transaction in MetaMask");
+                return reject(result.error);
+              }
+              alert.dismiss();
+              resolve(result.result);
+            })
+        }.bind(this));
+      },
+      decodeSignature(sig) {
+        var ret = {};
+        var signature = sig.slice(2);
+        ret.r = ethereumjs.Util.toBuffer(`0x${signature.slice(0, 64)}`);
+        ret.s = ethereumjs.Util.toBuffer(`0x${signature.slice(64, 128)}`);
+        ret.v = ethereumjs.Util.toBuffer(`0x${signature.slice(128, 130)}`);
+        return ret;
+      },
+      getTypedTx(tx) {
+        var msgParams = [
+          {
+            type: 'uint256',
+            name: 'nonce',
+            value: `0x${tx.nonce.toString('hex')}`
+          },
+          {
+            type: 'uint256',
+            name: 'gasPrice',
+            value: `0x${tx.gasPrice.toString('hex')}`
+          },
+          {
+            type: 'uint256',
+            name: 'gasLimit',
+            value: `0x${tx.gasLimit.toString('hex')}`
+          },
+          {
+            type: 'uint160',
+            name: 'to',
+            value: `0x${tx.to.toString('hex')}`
+          },
+          {
+            type: 'uint256',
+            name: 'value',
+            value: `0x${tx.value.toString('hex')}`
+          },
+          {
+            type: 'bytes',
+            name: 'data',
+            value: `0x${tx.data.toString('hex')}`
+          },
+          {
+            type: 'uint256',
+            name: 'networkId',
+            value: `0x${tx.networkId.toString('hex')}`
+          },
+          {
+            type: 'uint32',
+            name: 'fromFullShardKey',
+            value: `0x${tx.fromFullShardKey.toString('hex')}`
+          },
+          {
+            type: 'uint32',
+            name: 'toFullShardKey',
+            value: `0x${tx.toFullShardKey.toString('hex')}`
+          },
+          {
+            type: 'uint64',
+            name: 'gasTokenId',
+            value: `0x${tx.gasTokenId.toString('hex')}`
+          },
+          {
+            type: 'uint64',
+            name: 'transferTokenId',
+            value: `0x${tx.transferTokenId.toString('hex')}`
+          },
+          {
+            type: 'string',
+            name: 'qkcDomain',
+            value: 'bottom-quark'
+          }
+        ];
+        return msgParams;
+      },
+    },
+  };
+</script>
+
+<script>
+
+  function addrToChainShardRepr(address, shardSizes) {
+    if (!address) {
+      return -1;
+    }
+    const chainId = parseInt(address.slice(-8, -4));
+    const shardId = parseInt(address.slice(-4));
+    const shardSize = shardSizes[chainId];
+    return `${chainId}/${shardId & (shardSize - 1)}`;
+  }
+
+  const showTxMixin = {
+    data: {
+      toAddress: "",
+      fromAddress: "",
+      tx: null,
+      txJson: "",
+      showTx: false,
+      txId: "",
+    },
+    computed: {
+      fromShard() {
+        return addrToChainShardRepr(this.fromAddress, this.shardSizes);
+      },
+      toShard() {
+        return addrToChainShardRepr(this.toAddress, this.shardSizes);
+      },
+    },
+    methods: {
+      async sendTx() {
+        this.showTx = false;
+        let txResp;
+        try {
+          txResp = await axios.post("/sendRawTx", {
+            rawTx: `0x${this.tx.serialize().toString("hex")}`,
+          });
+        } catch (error) {
+          alert.danger("Sending transaction failed", 7000);
+          return;
+        }
+        this.txId = txResp.data.txId;
+        const success = !!txResp.data.txId && !txResp.data.txId.startsWith('0x000000000000000000000000000000000000000');
+        if (success) {
+          const url = `<a href="/tx/${txResp.data.txId}">${txResp.data.txId}</a>`;
+          alert.success(`Successfully sent transaction ${url}.`);
+          if (this.sendTxCallback) {
+            this.sendTxCallback();
+          }
+        } else {
+          alert.danger("Sending transaction failed", 7000);
+          return;
+        }
+      },
+      hideTx() {
+        this.showTx = false;
+      },
+      txHashSigned() {
+        return this.tx && `0x${this.tx.hash().toString("hex")}`;
+      },
+    },
+  };
+</script>
+
+
+<script>
+
+  nav.active = "contract";
+
+  const modeInteract = "MODE_INTERACTING";
+  const modeDeploy = "MODE_DEPLOYING";
+
+  const contract = new Vue({
+    el: "#contract",
+    mixins: [balanceMixin, showTxMixin],
+    data: {
+      mode: modeInteract,
+      contractAddress: "",
+      abi: "",
+      abiMethods: [],
+      showInteraction: false,
+      selectedMethod: {
+        name: "Select a function",
+        inputs: [],
+        outputs: [],
+      },
+      inputArgs: [],
+      outputResults: [],
+      contractByteCode: "",
+      gasLimit: "",
+      gasPriceGwei: "10",
+      syncing: false,
+      amount: 0,
+      allowBalanceTransfer: false,
+      nav,
+      gasTokenStr: "QKC",
+    },
+    computed: {
+      placeholder() {
+        // eslint-disable-next-line
+        return '[{"constant":true,"inputs":[],"name":"getBlockNumber","outputs":[{"name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"_newgreeting","type":"string"}],"name":"setGreeting","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"greet","outputs":[{"name":"","type":"string"}],"payable":false,"stateMutability":"view","type":"function"},{"inputs":[{"name":"_greeting","type":"string"}],"payable":false,"stateMutability":"nonpayable","type":"constructor"}]';
+      },
+      interacting() {
+        return this.mode === modeInteract;
+      },
+      deploying() {
+        return this.mode === modeDeploy;
+      },
+      contractAddressState() {
+        return (this.contractAddressInvalidFeedback === "");
+      },
+      contractAddressInvalidFeedback() {
+        if (this.contractAddress.length === 0) {
+          return "";
+        }
+        if (!/^0x[0-9A-F]{48}$/i.test(this.contractAddress)) {
+          return "Invalid contract address";
+        }
+        const shardMask = this.shardSize - 1;
+        const addressShard = parseInt(this.address.slice(42), 16) & shardMask;
+        const contractShard = parseInt(this.contractAddress.slice(42), 16) & shardMask;
+        if (addressShard !== contractShard) {
+          return `Contract call must happen in the same shard as the primary address (address shard ${addressShard} vs. contract shard ${contractShard})`;
+        }
+        return "";
+      },
+      abiState() {
+        return (this.abiInvalidFeedback === "");
+      },
+      abiInvalidFeedback() {
+        if (this.abi.length === 0) {
+          return "";
+        }
+        try {
+          JSON.parse(this.abi);
+          return "";
+        } catch (e) {
+          return "Invalid ABI";
+        }
+      },
+      contractByteCodeState() {
+        return (this.contractByteCodeInvalidFeedback === "");
+      },
+      contractByteCodeInvalidFeedback() {
+        if (this.contractByteCode.length === 0) {
+          return "";
+        }
+        if (!/^0x[0-9A-F]*$/i.test(this.contractByteCode)) {
+          return "Invalid contract byte code";
+        }
+        return "";
+      },
+      interactValid() {
+        return (
+          this.contractAddress.length > 0 &&
+          this.abi.length > 0 &&
+          this.contractAddressInvalidFeedback === "" &&
+          this.abiInvalidFeedback === ""
+        );
+      },
+      gasLimitState() {
+        return (this.gasLimitInvalidFeedback === "");
+      },
+      gasLimitInvalidFeedback() {
+        if (this.gasLimit.length === 0) {
+          return "";
+        }
+        if (!/^[0-9]+$/i.test(this.gasLimit)) {
+          return "Invalid gas limit";
+        }
+        return "";
+      },
+      deployValid() {
+        return (
+          this.contractByteCode.length > 0 &&
+          this.gasLimit.length > 0 &&
+          this.contractByteCodeInvalidFeedback === "" &&
+          this.gasLimitInvalidFeedback === ""
+        );
+      },
+    },
+    methods: {
+      clickInteractingTab() {
+        this.mode = modeInteract;
+        alert.dismiss();
+        this.showTx = false;
+      },
+      clickDeployingTab() {
+        this.mode = modeDeploy;
+        alert.dismiss();
+        this.showTx = false;
+      },
+      access() {
+        alert.dismiss();
+        const abi = JSON.parse(this.abi);
+        this.abiMethods = abi
+          .filter(i => i.name && i.type === "function")
+          .sort((a, b) => a.name.localeCompare(b.name));
+        this.showInteraction = true;
+      },
+      chooseMethod(e) {
+        // clear inputs & outputs
+        for (let i = 0; i < this.outputResults.length; ++i) {
+          this.outputResults[i] = "";
+        }
+        for (let i = 0; i < this.inputArgs.length; ++i) {
+          this.inputArgs[i] = "";
+        }
+        const targetMethod = e.target.innerText;
+        const method = this.abiMethods.find(i => i.name === targetMethod);
+        // deep clone to avoid modification
+        this.selectedMethod = JSON.parse(JSON.stringify(method));
+        // also change placeholder: address -> recipient
+        [...this.selectedMethod.inputs, ...this.selectedMethod.outputs]
+          .forEach((io) => {
+            if (io.type === "address") {
+              io.placeholder = "recipient";
+            }
+          });
+        if (method.payable) {
+          // push to the first
+          this.selectedMethod.inputs.unshift({
+            type: "uint256",
+            label: "pay tQKC (wei)",
+            name: "pay",
+          });
+        }
+      },
+      async interact() {
+        alert.dismiss();
+        // ref: web3.js/lib, and MEW
+        const method = this.selectedMethod;
+        const sha3 = ethereumjs.Util.sha3;
+
+        // note payable functions will always have first element as the amount
+        let value = 0;
+        let inputs = method.inputs;
+        let inputArgs = this.inputArgs;
+        if (method.payable) {
+          this.amount = BigNumber(inputArgs[0]).dividedBy(1e18);
+          value = `0x${Number(inputArgs[0]).toString(16)}`;
+          inputs = inputs.slice(1);
+          inputArgs = inputArgs.slice(1);
+        }
+        const inputTypes = inputs.map(i => i.type);
+        let typeNames = inputTypes.join();
+        const funcFullName = method.name + "(" + typeNames + ")";
+        const funcSig = sha3(funcFullName).toString("hex").slice(0, 8);
+
+        const args = [];
+        for (let i = 0; i < inputs.length; ++i) {
+          const arg = inputArgs[i];
+          if (arg) {
+            const t = inputs[i].type;
+            if (t.indexOf("[") !== -1 && t.indexOf("]") !== -1) {
+              args.push(arg.split(",").map(a => a.trim()));
+            } else if (t === "bool") {
+              args.push(JSON.parse(arg));
+            } else {
+              args.push(arg);
+            }
+          } else {
+            args.push("");
+          }
+        }
+        const encodedFuncCall = "0x" + funcSig +
+          web3utilSolidity.encodeParams(inputTypes, args);
+        const fromBuffer = ethereumjs.Util.toBuffer(this.address);
+        const fromFullShardKey = "0x" + fromBuffer.subarray(20).toString("hex");
+        const toBuffer = ethereumjs.Util.toBuffer(this.contractAddress);
+        const toFullShardKey = "0x" + toBuffer.subarray(20).toString("hex");
+
+        const transactionCountResp = await axios.post(
+          "/getTransactionCount",
+          { address: this.address },
+        );
+
+        const rawTx = {
+          nonce: transactionCountResp.data.transactionCount,
+          to: "0x" + toBuffer.subarray(0, 20).toString("hex"),
+          gasPrice: "0x" + (Number(this.gasPriceGwei) * 1e9).toString(16),
+          gas: "0x" + (this.gasLimit ? Number(this.gasLimit) : 1000000).toString(16),
+          data: encodedFuncCall,
+          value: "0x" + value.toString(16),
+          fromFullShardKey,
+          toFullShardKey,
+          networkId: `0x${this.networkId.toString(16)}`,
+          gasTokenId: `0x${this.gasTokenId.toString(16)}`,
+          transferTokenId: `0x${this.transferTokenId.toString(16)}`,
+        };
+
+        let callResp;
+        if (method.constant) { // read
+          try {
+            callResp = await axios.post("/call", [{
+              from: this.address,
+              to: this.contractAddress,
+              gasPrice: "0x" + (Number(this.gasPriceGwei) * 1e9).toString(16),
+              gas: "0x" + (this.gasLimit ? Number(this.gasLimit) : 1000000).toString(16),
+              data: encodedFuncCall,
+              value: "0x" + value.toString(16),
+            }, "latest"]);
+          } catch (error) {
+            alert.danger("Method call failed", 7000);
+            return;
+          }
+          const success = !!callResp.data.data;
+          if (success) {
+            // render outputs
+            const outputTypes = method.outputs.map(i => i.type);
+            typeNames = outputTypes.join();
+            const data = callResp.data.data.replace("0x", "");
+            const decodedOutputs = web3utilSolidity.decodeParams(outputTypes, data);
+            for (let i = 0; i < decodedOutputs.length; ++i) {
+              const decodedOutput = decodedOutputs[i];
+              if (decodedOutput instanceof BigNumber) {
+                this.$set(this.outputResults, i, decodedOutput.toFixed(0));
+              } else {
+                this.$set(this.outputResults, i, decodedOutput);
+              }
+            }
+          }
+        } else { // write
+          const tx = new ethereumjs.Tx(rawTx);
+          if (this.key) {
+            tx.sign(ethereumjs.Util.toBuffer(this.key));
+          } else {
+            try {
+              var sig = await this.metaMaskSignTyped(tx);
+              tx.version = '0x01';
+              rawTx.version = '0x01'; // show version
+              Object.assign(tx, this.decodeSignature(sig));
+            } catch (error) {
+              return;
+            }
+          }
+
+          this.tx = tx;
+          this.txJson = JSON.stringify(rawTx, null, "  ");
+          this.fromAddress = this.address;
+          this.toAddress = this.contractAddress;
+          this.showTx = true;
+        }
+      },
+      async deploy() {
+        alert.dismiss();
+        const fromBuffer = ethereumjs.Util.toBuffer(this.address);
+        const fromFullShardKey = "0x" + fromBuffer.subarray(20).toString("hex");
+        const transactionCountResp = await axios.post(
+          "/getTransactionCount",
+          { address: this.address },
+        );
+
+        const rawTx = {
+          nonce: transactionCountResp.data.transactionCount,
+          // FIXME: hard-coded 10 gwei
+          gasPrice: "0x" + 1e10.toString(16),
+          gas: "0x" + Number(this.gasLimit).toString(16),
+          data: this.contractByteCode,
+          fromFullShardKey,
+          toFullShardKey: fromFullShardKey,
+          value: "0x0",
+          networkId: `0x${this.networkId.toString(16)}`,
+          gasTokenId: `0x${this.gasTokenId.toString(16)}`,
+          transferTokenId: `0x${this.transferTokenId.toString(16)}`,
+        };
+        const tx = new ethereumjs.Tx(rawTx);
+        if (this.key) {
+          tx.sign(ethereumjs.Util.toBuffer(this.key));
+        } else {
+          try {
+            var sig = await this.metaMaskSignTyped(tx);
+            tx.version = '0x01';
+            rawTx.version = '0x01'; // show version
+            Object.assign(tx, this.decodeSignature(sig));
+          } catch (error) {
+            return;
+          }
+        }
+        this.tx = tx;
+        this.txJson = JSON.stringify(rawTx, null, "  ");
+        this.fromAddress = this.address;
+        this.toAddress = "";
+        this.showTx = true;
+      },
+    },
+  });
+</script> 
+
+  </div>
+</body>
+
+</html>
+
