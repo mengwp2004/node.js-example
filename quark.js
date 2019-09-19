@@ -1,337 +1,28 @@
 import QuarkChain from 'quarkchain-web3';
 import Web3 from 'web3';
+var quarkParam = require('./quark-param');
 var ethereumjsUtil = require('ethereumjs-util');
 
 var mainUrl = 'http://jrpc.mainnet.quarkchain.io:38391';
-var testUrl =  'http://jrpc.devnet.quarkchain.io:38391';
 
 const mainnetNetworkId = '0x1';
-const devnetNetworkId = '0xff';
-
-
-var movieAbi = [
-	{
-		"constant": false,
-		"inputs": [
-			{
-				"name": "name",
-				"type": "string"
-			},
-			{
-				"name": "id",
-				"type": "uint32"
-			}
-		],
-		"name": "issueContract",
-		"outputs": [
-			{
-				"name": "",
-				"type": "bool"
-			}
-		],
-		"payable": false,
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"constant": false,
-		"inputs": [
-			{
-				"name": "newOwner",
-				"type": "address"
-			}
-		],
-		"name": "transferOwnership",
-		"outputs": [],
-		"payable": false,
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": false,
-				"name": "name",
-				"type": "string"
-			},
-			{
-				"indexed": false,
-				"name": "id",
-				"type": "uint32"
-			},
-			{
-				"indexed": false,
-				"name": "issued",
-				"type": "bool"
-			},
-			{
-				"indexed": false,
-				"name": "",
-				"type": "address"
-			},
-			{
-				"indexed": false,
-				"name": "",
-				"type": "address"
-			},
-			{
-				"indexed": false,
-				"name": "",
-				"type": "address"
-			}
-		],
-		"name": "IssueContract",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": true,
-				"name": "previousOwner",
-				"type": "address"
-			},
-			{
-				"indexed": true,
-				"name": "newOwner",
-				"type": "address"
-			}
-		],
-		"name": "OwnershipTransferred",
-		"type": "event"
-	},
-	{
-		"constant": true,
-		"inputs": [
-			{
-				"name": "id",
-				"type": "uint32"
-			}
-		],
-		"name": "getRelation",
-		"outputs": [
-			{
-				"name": "name",
-				"type": "string"
-			},
-			{
-				"name": "watchAddress",
-				"type": "address"
-			},
-			{
-				"name": "admireAddress",
-				"type": "address"
-			},
-			{
-				"name": "commentAddress",
-				"type": "address"
-			}
-		],
-		"payable": false,
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"constant": true,
-		"inputs": [],
-		"name": "owner",
-		"outputs": [
-			{
-				"name": "",
-				"type": "address"
-			}
-		],
-		"payable": false,
-		"stateMutability": "view",
-		"type": "function"
-	}
-];
-
-
-var watchAbi = [
-	{
-		"constant": true,
-		"inputs": [
-			{
-				"name": "user",
-				"type": "address"
-			}
-		],
-		"name": "getWatchRecord",
-		"outputs": [
-			{
-				"name": "begin",
-				"type": "uint64"
-			},
-			{
-				"name": "end",
-				"type": "uint64"
-			}
-		],
-		"payable": false,
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"constant": true,
-		"inputs": [],
-		"name": "getMoiveInfo",
-		"outputs": [
-			{
-				"name": "id",
-				"type": "uint32"
-			},
-			{
-				"name": "name",
-				"type": "string"
-			}
-		],
-		"payable": false,
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"constant": true,
-		"inputs": [],
-		"name": "owner",
-		"outputs": [
-			{
-				"name": "",
-				"type": "address"
-			}
-		],
-		"payable": false,
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"constant": true,
-		"inputs": [],
-		"name": "getWatchStat",
-		"outputs": [
-			{
-				"name": "",
-				"type": "uint32"
-			}
-		],
-		"payable": false,
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"constant": false,
-		"inputs": [
-			{
-				"name": "user",
-				"type": "address"
-			},
-			{
-				"name": "begin",
-				"type": "uint64"
-			},
-			{
-				"name": "end",
-				"type": "uint64"
-			}
-		],
-		"name": "putWatchRecord",
-		"outputs": [
-			{
-				"name": "",
-				"type": "bool"
-			}
-		],
-		"payable": false,
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"constant": false,
-		"inputs": [
-			{
-				"name": "newOwner",
-				"type": "address"
-			}
-		],
-		"name": "transferOwnership",
-		"outputs": [],
-		"payable": false,
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"name": "id",
-				"type": "uint32"
-			},
-			{
-				"name": "name",
-				"type": "string"
-			},
-			{
-				"name": "master",
-				"type": "address"
-			}
-		],
-		"payable": false,
-		"stateMutability": "nonpayable",
-		"type": "constructor"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": false,
-				"name": "user",
-				"type": "address"
-			},
-			{
-				"indexed": false,
-				"name": "begin",
-				"type": "uint64"
-			},
-			{
-				"indexed": false,
-				"name": "end",
-				"type": "uint64"
-			}
-		],
-		"name": "PutWatchRecord",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": true,
-				"name": "previousOwner",
-				"type": "address"
-			},
-			{
-				"indexed": true,
-				"name": "newOwner",
-				"type": "address"
-			}
-		],
-		"name": "OwnershipTransferred",
-		"type": "event"
-	}
-];
-
-
 
 var web3;
 var myContractInstance;
+var serverUrl = quarkParam.serverUrl;
+var networkId = quarkParam.networkId;
 
-var movieAddress = '0x30D1b3468bFe0b52dAd139d14236996470F2E8150001fCE7';
+var movieContractAddress = quarkParam.movieContractAddress;
+//qkc address
+var movieOwnerAddress = quarkParam.movieOwnerAddress; 
+var movieOwnerPrivate = quarkParam.movieOwnerPrivate;
+
 
 function init(){
   web3 = new Web3();
-  QuarkChain.injectWeb3(web3, testUrl);
-  var MyContract = web3.qkc.contract(movieAbi);
-  myContractInstance = MyContract.at(movieAddress);
+  QuarkChain.injectWeb3(web3, serverUrl);
+  var MyContract = web3.qkc.contract(quarkParam.movieAbi);
+  myContractInstance = MyContract.at(movieContractAddress);
 }
 
 function getRelation(id){
@@ -341,11 +32,19 @@ function getRelation(id){
 
 function issueContract(from,name,id){
   //qkc address
-  return  myContractInstance.issueContract.sendTransaction(name,id,{from:from});
+  return  myContractInstance.issueContract.sendTransaction(name,id,{from:from,fromFullShardKey: "0x00000001", toFullShardKey: "0x00000001"},        function(err, result){ 
+          if(err){
+             console.log("err:" + err);
+          }
+          if(result){
+             console.log("result:" + result);
+          }
+      });
 }
 
 function callFunction(functionName, ...inputArgs){
-   var abiMethods = movieAbi
+   console.log(quarkParam.movieAbi);
+   var abiMethods = quarkParam.movieAbi
           .filter(i => i.name && i.type === "function")
           .sort((a, b) => a.name.localeCompare(b.name));
    const method = abiMethods.find(i => i.name === functionName); 
@@ -389,9 +88,10 @@ function callFunction(functionName, ...inputArgs){
    let gasLimit = 4300000;
 
    let gasPriceGwei = 10; 
-   let networkId = ;
-   let gasTokenId = ;  
-   let transferTokenId = ;
+   let networkId = 0;
+   let gasTokenId = 0;  
+   let transferTokenId = 0;
+   let value = 0;
    const rawTx = {
           nonce: nonce,
           to: "0x" + toBuffer.subarray(0, 20).toString("hex"),
@@ -445,42 +145,38 @@ function getTransactionCount(a){
 function sendTransaction(transactionObject){
 
 }
-//qkc address
-var a = "0x710807457D58C3673C07FCa3171592E74e9749440001fCE7"; 
-var aPrivate = "0x93fc0babe95cb8767af5d4da6617a62522bcd841162705a6e02706f08bede062";
-
 function test(){
   
   init();
-  web3.qkc.setPrivateKey(aPrivate);
-  console.log(a);
+  web3.qkc.setPrivateKey(movieOwnerPrivate);
+  console.log(movieOwnerAddress);
 
   // get qkc balance
-  var balance = getBalance(a);
+  var balance = getBalance(movieOwnerAddress);
   console.log(balance);  
 
-  var ethAddress = getEthAddress(a);
+  var ethAddress = getEthAddress(movieOwnerAddress);
   console.log(ethAddress);
 
   var qkcAddress = getQkcAddress(ethAddress);
   console.log(qkcAddress);
 
-  var count = getTransactionCount(a);
+  var count = getTransactionCount(movieOwnerAddress);
   console.log(count);
 
   var relation = getRelation(1);
   console.log("getRelatoin:" + relation);
 
-  //var hex = issueContract(a,"hello",1);
+  var hex = issueContract(movieOwnerAddress,"hello",1);
   //console.log("issueContract:" + hex);
 
-  callFunction("issueContract");
 }
 
 
-//test()
-init();
-callFunction("issueContract","hello",1);
+test()
+//init();
+
+//callFunction("issueContract","hello",1);
 
 function getData(){
   console.log("get data from quark!");
